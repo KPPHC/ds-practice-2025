@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package verify;
+
+message Book {
+    string bookId = 1;
+    string book_quantity = 2;
+}
+
+service TransactionVerificationService {
+    rpc TransactionVerification (TransactionVerificationRequest) returns (TransactionVerificationResponse);
+}
+
+message TransactionVerificationRequest {
+    repeated Book user_books = 1;
+    string user_name = 2;
+    string user_email = 3;
+    string card_number = 4;
+    string card_expiry = 5;
+    string card_cvv = 6;
+    string billing_street = 7;
+    string billing_city = 8;
+    string billing_state = 9;
+    string billing_zip = 10;
+    string shipping_method = 11;
+    bool terms_accepted = 12;
+}
+
+message TransactionVerificationResponse {
+    bool is_valid = 1;
+    string reason = 2;
+}
