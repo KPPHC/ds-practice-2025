@@ -1,1 +1,5 @@
 __pycache__
+fraud_detection/src/creditcard.csv
+fraud_detection/src/fraudTest.csv
+fraud_detection/src/fraudTrain.csv
+fraud_detection/src/fraud_model2.pkl

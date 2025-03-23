@@ -14,14 +14,15 @@ import fraud_detection_pb2_grpc as fraud_detection_grpc
 
 import grpc
 
-def greet(name='you'):
+def call_fraud_detection(card_number, order_amount):
     # Establish a connection with the fraud-detection gRPC service.
     with grpc.insecure_channel('fraud_detection:50051') as channel:
         # Create a stub object.
-        stub = fraud_detection_grpc.HelloServiceStub(channel)
+        stub = fraud_detection_grpc.FraudDetectionServiceStub(channel)
         # Call the service through the stub object.
-        response = stub.SayHello(fraud_detection.HelloRequest(name=name))
-    return response.greeting
+        request_obj = fraud_detection.FraudDetectionRequest(card_number=card_number, order_amount=order_amount)
+        response = stub.FraudDetection(request_obj)
+    return response.is_fraud
 
 
 suggestions_grpc_path = os.path.abspath(os.path.join(FILE, '../../../utils/pb/suggestions'))
@@ -88,11 +89,6 @@ def verify_transaction(transaction_data):
         response = stub.TransactionVerification(request)
     return response.is_valid
 
-def assign_orderID():
-    # Takes unix time and assigns it as orderID
-    import time
-    return str(int(time.time()))
-
 # Import Flask.
 # Flask is a web framework for Python.
 # It allows you to build a web application quickly.
@@ -109,11 +105,6 @@ CORS(app, resources={r'/*': {'origins': '*'}})
 # Define a GET endpoint.
 @app.route('/', methods=['GET'])
 def index():
-    """
-    Responds with 'Hello, [name]' when a GET request is made to '/' endpoint.
-    """
-    # Test the fraud-detection gRPC service.
-    response = greet(name='testorchestrator')
 
     # Book suggestions
     user_books = [
@@ -121,7 +112,7 @@ def index():
          {"title": "Roadside Picnic", "author": "Arkady Strugatsky and Boris Strugatsky", "quantity": 2}
      ]
     
-    suggestions = get_suggestions(user_books)
+    #suggestions = get_suggestions(user_books)
     # I should have a list of books that the user has bought
     
     # Return the response.
@@ -157,8 +148,10 @@ def checkout():
         "items": request_data.get("items"),
     }
 
+    import uuid
     try:
-        orderID = assign_orderID()
+        orderID = str(uuid.uuid4())
+        print(f"Order ID: {orderID}")
         logging.info("Received transaction data", extra={"orderID": orderID, "transaction_data": transaction_data})
         # Print request object data
         #print("Transaction Data:", transaction_data)
@@ -168,7 +161,7 @@ def checkout():
         from concurrent.futures import ThreadPoolExecutor
         with ThreadPoolExecutor(max_workers=3) as executor:
             logging.info("Starting thread for FraudDetection")
-            future_fraud = executor.submit(greet, name='you')
+            future_fraud = executor.submit(call_fraud_detection, transaction_data.get('creditCard', {}).get('number', ''), transaction_data.get('creditCard', {}).get('order_amount', ''))
             logging.info("Starting thread for Suggestions")
             future_suggest = executor.submit(get_suggestions, transaction_data.get('items', {}))
             logging.info("Starting thread for TransactionVerification")
